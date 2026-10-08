@@ -1,0 +1,141 @@
+<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<div class="app">
+  <header class="topbar">
+    <div class="brand">Focus Pact</div>
+    <div class="top-right">
+      <span id="userLabelEl" class="user-label"></span>
+      <button id="logoutBtn" class="btn small ghost" hidden>Log out</button>
+    </div>
+  </header>
+
+  <section id="authView" class="card">
+    <h2>Welcome back</h2>
+    <p class="muted">Log in or create an account to track focus with friends.</p>
+    <label class="field">
+      <span>Email</span>
+      <input id="emailInput" type="email" autocomplete="email" placeholder="you@example.com">
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input id="passwordInput" type="password" autocomplete="current-password" placeholder="••••••••">
+    </label>
+    <div class="row">
+      <button id="loginBtn" class="btn primary">Log in</button>
+      <button id="signupBtn" class="btn">Sign up</button>
+    </div>
+    <p id="authMsgEl" class="msg" aria-live="polite"></p>
+  </section>
+
+  <main id="mainView" hidden>
+    <section id="tab-dashboard" class="tab-page">
+      <div class="card timer-card">
+        <div id="timerStatusEl" class="status">Idle</div>
+        <div id="timerDisplayEl" class="timer">00:00:00</div>
+        <div id="timerMetaEl" class="muted small">No active session</div>
+        <div class="timer-btns">
+          <button id="focusStartBtn" class="btn primary big">Start</button>
+          <button id="focusPauseBtn" class="btn big" disabled>Pause</button>
+          <button id="focusStopBtn" class="btn danger big" disabled>Stop</button>
+        </div>
+        <button id="breakToggleBtn" class="btn break-btn">Start break</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Today <span id="todayDateEl" class="muted small"></span></div>
+        <div class="stat-grid">
+          <div class="stat">
+            <div id="todayFocusEl" class="bignum">0.0h</div>
+            <div class="muted small">focus</div>
+          </div>
+          <div class="stat">
+            <div id="todayBreakEl" class="bignum">0m</div>
+            <div class="muted small">break</div>
+          </div>
+          <div class="stat">
+            <div id="streakEl" class="bignum">0</div>
+            <div class="muted small">day streak</div>
+          </div>
+        </div>
+        <div class="goal-row">
+          <div class="progress"><div id="goalBarEl" class="progress-fill"></div></div>
+          <div id="goalTextEl" class="muted small"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">This week <span class="muted small">Mon to Sun</span></div>
+        <div class="week-total"><span id="weekTotalEl" class="bignum">0.0h</span></div>
+        <div id="weekChartEl" class="chart"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Records</div>
+        <div class="records">
+          <div><span class="muted">Longest streak</span><b id="longestStreakEl">0 days</b></div>
+          <div><span class="muted">Longest day</span><b id="longestDayEl">0.0h</b></div>
+          <div><span class="muted">Longest session</span><b id="longestSessionEl">0m</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-leaderboard" class="tab-page" hidden>
+      <div class="card">
+        <div class="card-title">Leaderboard</div>
+        <p class="muted small">Tap a row for a week breakdown. Times in Africa/Lagos days.</p>
+        <div id="leaderListEl"></div>
+        <button id="leaderRefreshBtn" class="btn small">Refresh</button>
+      </div>
+    </section>
+
+    <section id="tab-history" class="tab-page" hidden>
+      <div class="card">
+        <div class="card-title">History</div>
+        <p class="muted small">Your sessions only. Edit if you forgot to stop.</p>
+        <div id="historyListEl"></div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-page" hidden>
+      <div class="card">
+        <div class="card-title">Settings</div>
+        <label class="field">
+          <span>Display name</span>
+          <input id="displayNameInput" type="text" maxlength="30" placeholder="Your name">
+        </label>
+        <label class="field">
+          <span>Daily minimum (minutes)</span>
+          <input id="dailyMinInput" type="number" min="1" max="1440" step="1" value="60">
+        </label>
+        <button id="settingsSaveBtn" class="btn primary">Save settings</button>
+        <p id="settingsMsgEl" class="msg" aria-live="polite"></p>
+        <hr>
+        <div class="muted small" id="accountInfoEl"></div>
+        <div class="muted small" id="configInfoEl"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="bottomNav" class="bottom-nav" hidden>
+    <button data-tab="dashboard" class="nav-btn active">Timer</button>
+    <button data-tab="leaderboard" class="nav-btn">Board</button>
+    <button data-tab="history" class="nav-btn">History</button>
+    <button data-tab="settings" class="nav-btn">Settings</button>
+  </nav>
+</div>
+
+<div id="editModal" class="modal" hidden>
+  <div class="modal-box">
+    <h3>Edit session</h3>
+    <label class="field"><span>Start</span><input id="editStartInput" type="datetime-local"></label>
+    <label class="field"><span>End (empty = still running)</span><input id="editEndInput" type="datetime-local"></label>
+    <p id="editMsgEl" class="msg"></p>
+    <div class="row">
+      <button id="editSaveBtn" class="btn primary">Save</button>
+      <button id="editCancelBtn" class="btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="script.js"></script>
