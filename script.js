@@ -77,6 +77,29 @@ end $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users for each row execute function public.handle_new_user();
+
+-- Username lookup for legacy login support
+create or replace function public.get_email_for_username(p_username text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_email text;
+begin
+  select au.email into v_email
+  from public.profiles p
+  join auth.users au on au.id = p.id
+  where lower(p.display_name) = lower(trim(p_username))
+  limit 1;
+
+  return v_email;
+end;
+$$;
+
+grant execute on function public.get_email_for_username(text) to anon;
+grant execute on function public.get_email_for_username(text) to authenticated;
 ============================================================ */
 
 // ---- CONFIG: paste your Supabase project values here ----
@@ -367,11 +390,50 @@ function cleanUsername(v) {
 function validUsername(v) {
   return /^[A-Za-z0-9_.-]{3,30}$/.test(v);
 }
+function getAuthErrorMessage(error) {
+  const msg = (error && (error.message || String(error))) || "";
+  const lower = msg.toLowerCase();
+  if (lower.includes("invalid login credentials") || lower.includes("invalid_credentials") || lower.includes("wrong username") || lower.includes("wrong password") || lower.includes("password") && lower.includes("incorrect") || lower.includes("user not found")) {
+    return "Wrong username or password.";
+  }
+  return msg || "Wrong username or password.";
+}
 async function isUsernameTaken(name, exceptId) {
   const { data, error } = await sb.from("profiles")
     .select("id").ilike("display_name", name).limit(5);
   if (error) throw error;
   return (data || []).some((r) => r.id !== exceptId);
+}
+async function resolveLoginEmail(username) {
+  const name = cleanUsername(username);
+  if (!name) return "";
+
+  const localEmail = lookupLocalUserEmail(name);
+  if (localEmail) return localEmail;
+
+  try {
+    const { data, error } = await sb.rpc("get_email_for_username", { p_username: name });
+    if (!error && data) {
+      const email = String(data).trim();
+      if (email) {
+        rememberLocalUser(name, email);
+        return email;
+      }
+    }
+  } catch (e) {
+    // Ignore and fall back below if the RPC is not available yet.
+  }
+
+  const { data: profileRow, error: profileError } = await sb.from("profiles")
+    .select("display_name")
+    .ilike("display_name", name)
+    .limit(1)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profileRow) return "";
+
+  const fallbackEmail = lookupLocalUserEmail(profileRow.display_name || name);
+  return fallbackEmail || "";
 }
 async function ensureProfile() {
   const { data, error } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
@@ -903,11 +965,10 @@ els.loginBtn.addEventListener("click", async () => {
 
   setMsg(els.authMsgEl, "Logging in…");
   try {
-    const localEmail = lookupLocalUserEmail(username);
-    const email = localEmail || (username.includes("@") ? username : "");
+    const email = username.includes("@") ? username : await resolveLoginEmail(username);
 
     if (!email) {
-      setMsg(els.authMsgEl, "Sign up first, or use the email linked to your account.");
+      setMsg(els.authMsgEl, "Wrong username or password.");
       return;
     }
 
@@ -917,7 +978,7 @@ els.loginBtn.addEventListener("click", async () => {
     });
     if (error) throw error;
     els.authModal.hidden = true;
-  } catch (e) { setMsg(els.authMsgEl, e.message || String(e)); }
+  } catch (e) { setMsg(els.authMsgEl, getAuthErrorMessage(e)); }
 });
 els.signupBtn.addEventListener("click", async () => {
   const email = (els.signupEmailInput ? els.signupEmailInput.value : "").trim();
@@ -935,9 +996,10 @@ els.signupBtn.addEventListener("click", async () => {
   setMsg(els.authMsgEl, "Creating account…");
   try {
     if (await isUsernameTaken(uname, null)) {
-      setMsg(els.authMsgEl, "That username is taken. Try another.");
+      setMsg(els.authMsgEl, "That username is already taken. Try another.");
       return;
     }
+    rememberLocalUser(uname, email);
     try { localStorage.setItem(PENDING_USER_KEY, uname); } catch (e) {}
     const { data, error } = await sb.auth.signUp({
       email: email,
@@ -945,11 +1007,10 @@ els.signupBtn.addEventListener("click", async () => {
       options: { data: { display_name: uname } }
     });
     if (error) throw error;
-    rememberLocalUser(uname, email);
     if (data && data.session && data.session.user) {
       setMsg(els.authMsgEl, "Account created. Welcome, " + uname + "!");
     } else {
-      setMsg(els.authMsgEl, "Account created as " + uname + ". If email confirmation is on, confirm then log in (username saved).");
+      setMsg(els.authMsgEl, "Account created as " + uname + ". If email confirmation is on, confirm then log in.");
     }
     switchAuthMode("login");
     els.loginUsernameInput.value = uname;

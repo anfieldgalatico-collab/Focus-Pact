@@ -22,24 +22,24 @@
 
 body[data-theme="light"] {
   color-scheme: light;
-  --bg-0: #eef4ff;
-  --bg-1: #f8fbff;
-  --bg-2: #eaf1ff;
-  --card: rgba(255, 255, 255, 0.8);
-  --card-strong: rgba(255, 255, 255, 0.94);
-  --card-soft: rgba(242, 246, 255, 0.9);
-  --line: rgba(110, 130, 170, 0.2);
-  --line-strong: rgba(110, 130, 170, 0.28);
-  --text: #1a2336;
-  --muted: #5d6b82;
-  --accent: #6b63ff;
-  --accent-2: #0aa4ff;
-  --accent-3: #27c59a;
-  --green: #1c9d69;
-  --amber: #d08a00;
-  --red: #dd5860;
-  --shadow-soft: 0 12px 30px rgba(112, 130, 180, 0.18);
-  --shadow-strong: 0 24px 60px rgba(112, 130, 180, 0.2);
+  --bg-0: #edf4ff;
+  --bg-1: #f7f9ff;
+  --bg-2: #edf5ff;
+  --card: rgba(255, 255, 255, 0.82);
+  --card-strong: rgba(255, 255, 255, 0.96);
+  --card-soft: rgba(242, 247, 255, 0.95);
+  --line: rgba(123, 137, 172, 0.2);
+  --line-strong: rgba(123, 137, 172, 0.32);
+  --text: #1a2337;
+  --muted: #596a85;
+  --accent: #675dff;
+  --accent-2: #1e9af5;
+  --accent-3: #22b08a;
+  --green: #1b9e67;
+  --amber: #c98500;
+  --red: #d85d62;
+  --shadow-soft: 0 16px 34px rgba(110, 128, 179, 0.15);
+  --shadow-strong: 0 28px 55px rgba(110, 128, 179, 0.18);
 }
 
 * { box-sizing: border-box; }
@@ -71,9 +71,9 @@ body::before {
 
 .app {
   position: relative;
-  max-width: 620px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 18px 14px 0;
+  padding: 18px 18px 0;
 }
 
 .topbar {
@@ -104,7 +104,7 @@ body::before {
   height: 38px;
   border-radius: 12px;
   border: 1px solid var(--line-strong);
-  background: rgba(14, 21, 31, 0.8);
+  background: var(--card-soft);
   color: var(--text);
   cursor: pointer;
   font-size: 1.1rem;
@@ -128,6 +128,14 @@ body::before {
   box-shadow: 0 24px 50px rgba(7, 10, 20, 0.48), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
+body[data-theme="light"] #authView.card,
+body[data-theme="light"] .modal-box,
+body[data-theme="light"] .auth-modal-box {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(239, 244, 255, 0.96));
+  border-color: var(--line);
+  box-shadow: var(--shadow-strong);
+}
+
 .auth-intro {
   text-align: center;
   margin-bottom: 18px;
@@ -145,10 +153,29 @@ body::before {
   background: linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(11, 17, 28, 0.82));
   border: 1px solid var(--line);
   border-radius: 24px;
-  padding: 18px 18px 16px;
+  padding: 20px 20px 18px;
   margin: 14px 0;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
+}
+
+body[data-theme="light"] .card,
+body[data-theme="light"] .modal-box,
+body[data-theme="light"] .leader-summary,
+body[data-theme="light"] .analytics-metric,
+body[data-theme="light"] .stat,
+body[data-theme="light"] .achievement-item,
+body[data-theme="light"] .leader-row,
+body[data-theme="light"] .bottom-nav {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 248, 255, 0.96)) !important;
+}
+
+body[data-theme="light"] #authView.card,
+body[data-theme="light"] .modal-box,
+body[data-theme="light"] .auth-modal-box {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(239, 244, 255, 0.96)) !important;
+  border-color: var(--line) !important;
+  box-shadow: var(--shadow-strong) !important;
 }
 
 .card::before {
@@ -272,6 +299,16 @@ input {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
+body[data-theme="light"] input {
+  background: rgba(245, 249, 255, 0.94) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--text) !important;
+}
+
+body[data-theme="light"] .modal {
+  background: rgba(115, 128, 160, 0.18) !important;
+}
+
 input:focus {
   border-color: rgba(124, 92, 255, 0.8);
   box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12);
@@ -296,6 +333,15 @@ input:focus {
   letter-spacing: -0.01em;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.2s ease, filter 0.18s ease;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 6px 16px rgba(0,0,0,0.12);
+}
+
+body[data-theme="light"] .btn,
+body[data-theme="light"] .icon-btn,
+body[data-theme="light"] .preset-btn,
+body[data-theme="light"] .nav-btn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(238, 244, 255, 0.96));
+  border-color: var(--line-strong);
+  color: var(--text);
 }
 
 .btn:hover:not(:disabled) {
@@ -806,6 +852,37 @@ hr {
   border: none;
   border-top: 1px solid var(--line);
   margin: 16px 0;
+}
+
+@media (min-width: 900px) {
+  #mainView {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  #tab-dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  #tab-dashboard > .card {
+    margin: 0;
+  }
+
+  #tab-dashboard > .card:nth-child(1),
+  #tab-dashboard > .card:nth-child(2),
+  #tab-dashboard > .card:nth-child(3),
+  #tab-dashboard > .card:nth-child(4),
+  #tab-dashboard > .card:nth-child(5),
+  #tab-dashboard > .card:nth-child(6) {
+    min-height: 100%;
+  }
+
+  .timer-card {
+    grid-row: span 2;
+  }
 }
 
 @media (max-width: 480px) {
