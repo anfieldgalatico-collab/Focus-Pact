@@ -80,7 +80,7 @@ create trigger on_auth_user_created
 ============================================================ */
 
 // ---- CONFIG: paste your Supabase project values here ----
-const SUPABASE_URL = "https://vfoslwqmnkdicyqfzccb.supabase.co";
+const SUPABASE_URL = "https://vfoslwqnnkdtcyqfzccb.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_zPS-BxuZG6t6vAWJ5QpbKg_t3G66Y_a";
 // ----------------------------------------------------------
 
