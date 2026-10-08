@@ -30,6 +30,8 @@ create index if not exists sessions_active_idx
   on public.sessions (user_id) where end_at is null;
 create index if not exists sessions_start_idx
   on public.sessions (start_at desc);
+create unique index if not exists profiles_display_name_lower_uniq
+  on public.profiles (lower(display_name));
 
 alter table public.profiles enable row level security;
 alter table public.sessions enable row level security;
@@ -90,7 +92,7 @@ const DAY_MS = 86400000;
 
 const $ = (id) => document.getElementById(id);
 const els = {};
-["authView","mainView","bottomNav","emailInput","passwordInput","loginBtn","signupBtn","authMsgEl",
+["authView","mainView","bottomNav","emailInput","usernameInput","passwordInput","loginBtn","signupBtn","authMsgEl",
 "userLabelEl","logoutBtn","timerStatusEl","timerDisplayEl","timerMetaEl","focusStartBtn","focusPauseBtn",
 "focusStopBtn","breakToggleBtn","todayDateEl","todayFocusEl","todayBreakEl","streakEl","goalBarEl",
 "goalTextEl","weekTotalEl","weekChartEl","longestStreakEl","longestDayEl","longestSessionEl",
@@ -276,27 +278,55 @@ function switchTab(name) {
   if (name === "history") { loadMySessions().then(renderHistory); }
 }
 
-// ---------- Auth ----------
+// ---------- Auth + usernames ----------
+const PENDING_USER_KEY = "focuspact_pending_username";
+function cleanUsername(v) {
+  return String(v || "").trim().replace(/\s+/g, "_").slice(0, 30);
+}
+function validUsername(v) {
+  return /^[A-Za-z0-9_.-]{3,30}$/.test(v);
+}
+async function isUsernameTaken(name, exceptId) {
+  const { data, error } = await sb.from("profiles")
+    .select("id").ilike("display_name", name).limit(5);
+  if (error) throw error;
+  return (data || []).some((r) => r.id !== exceptId);
+}
 async function ensureProfile() {
   const { data, error } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (error) throw error;
+  let pending = "";
+  try { pending = cleanUsername(localStorage.getItem(PENDING_USER_KEY)); } catch (e) { pending = ""; }
   if (data) {
     profile = {
       display_name: data.display_name || "",
       daily_min_minutes: data.daily_min_minutes || 60
     };
+    if (pending && pending !== profile.display_name) {
+      if (!validUsername(pending)) pending = "";
+      else if (await isUsernameTaken(pending, user.id)) pending = "";
+    } else pending = "";
+    if (pending) {
+      const { error: upErr } = await sb.from("profiles")
+        .update({ display_name: pending }).eq("id", user.id);
+      if (!upErr) profile.display_name = pending;
+    }
   } else {
-    const fallback = (user.email || "friend").split("@")[0].slice(0, 30);
+    let pick = pending && validUsername(pending) ? pending : "";
+    if (pick && await isUsernameTaken(pick, user.id)) pick = "";
+    if (!pick) pick = (user.email || "friend").split("@")[0].slice(0, 30) || "friend";
     const { error: insErr } = await sb.from("profiles").insert({
-      id: user.id, display_name: fallback, daily_min_minutes: 60
+      id: user.id, display_name: pick, daily_min_minutes: 60
     });
     if (insErr) throw insErr;
-    profile = { display_name: fallback, daily_min_minutes: 60 };
+    profile = { display_name: pick, daily_min_minutes: 60 };
   }
+  try { localStorage.removeItem(PENDING_USER_KEY); } catch (e) {}
   els.displayNameInput.value = profile.display_name || "";
   els.dailyMinInput.value = String(profile.daily_min_minutes || 60);
-  els.userLabelEl.textContent = profile.display_name || user.email || "";
-  els.accountInfoEl.textContent = "Signed in as " + (user.email || user.id);
+  if (els.usernameInput && !els.usernameInput.value) els.usernameInput.value = profile.display_name || "";
+  els.userLabelEl.textContent = profile.display_name || "friend";
+  els.accountInfoEl.textContent = "Username " + (profile.display_name || "friend");
 }
 
 async function boot() {
@@ -679,19 +709,27 @@ async function deleteSession(id) {
 
 // ---------- Settings ----------
 async function saveSettings() {
-  const name = els.displayNameInput.value.trim().slice(0, 30);
+  const name = cleanUsername(els.displayNameInput.value);
   let mins = parseInt(els.dailyMinInput.value, 10);
   if (!isFinite(mins) || mins < 1) mins = 60;
   mins = Math.min(1440, mins);
+  if (!validUsername(name)) {
+    setMsg(els.settingsMsgEl, "Username: 3-30 chars, letters/numbers/_ . - only.");
+    return;
+  }
   try {
+    if (name !== profile.display_name && await isUsernameTaken(name, user.id)) {
+      setMsg(els.settingsMsgEl, "That username is taken. Try another.");
+      return;
+    }
     const { error } = await sb.from("profiles").update({
       display_name: name, daily_min_minutes: mins
     }).eq("id", user.id);
     if (error) throw error;
     profile.display_name = name;
     profile.daily_min_minutes = mins;
-    els.userLabelEl.textContent = name || user.email || "";
-    setMsg(els.settingsMsgEl, "Saved.");
+    els.userLabelEl.textContent = name;
+    setMsg(els.settingsMsgEl, "Saved. Friends now see you as " + name + ".");
   } catch (e) { setMsg(els.settingsMsgEl, "Save failed: " + (e.message || e)); }
 }
 
@@ -706,13 +744,28 @@ els.loginBtn.addEventListener("click", async () => {
   } catch (e) { setMsg(els.authMsgEl, e.message || String(e)); }
 });
 els.signupBtn.addEventListener("click", async () => {
+  const uname = cleanUsername(els.usernameInput ? els.usernameInput.value : "");
+  if (!validUsername(uname)) {
+    setMsg(els.authMsgEl, "Pick a username: 3-30 chars, letters/numbers/_ . - only.");
+    return;
+  }
   setMsg(els.authMsgEl, "Creating account…");
   try {
-    const { error } = await sb.auth.signUp({
-      email: els.emailInput.value.trim(), password: els.passwordInput.value
+    if (await isUsernameTaken(uname, null)) {
+      setMsg(els.authMsgEl, "That username is taken. Try another.");
+      return;
+    }
+    try { localStorage.setItem(PENDING_USER_KEY, uname); } catch (e) {}
+    const { data, error } = await sb.auth.signUp({
+      email: els.emailInput.value.trim(), password: els.passwordInput.value,
+      options: { data: { display_name: uname } }
     });
     if (error) throw error;
-    setMsg(els.authMsgEl, "Account created. If email confirmation is on, confirm then log in.");
+    if (data && data.session && data.session.user) {
+      setMsg(els.authMsgEl, "Account created. Welcome, " + uname + "!");
+    } else {
+      setMsg(els.authMsgEl, "Account created as " + uname + ". If email confirmation is on, confirm then log in (username saved).");
+    }
   } catch (e) { setMsg(els.authMsgEl, e.message || String(e)); }
 });
 els.logoutBtn.addEventListener("click", async () => { await sb.auth.signOut(); });
