@@ -428,6 +428,43 @@ body[data-theme="light"] .nav-btn {
   min-height: 48px;
 }
 
+.motivation-card {
+  margin-top: 16px;
+}
+
+.motivation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.motivation-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.22), rgba(57, 199, 255, 0.18));
+  font-size: 1.2rem;
+}
+
+.motivation-quote {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.motivation-author {
+  margin: 10px 0 0;
+  font-style: italic;
+}
+
 .achievement-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

@@ -123,7 +123,8 @@ const els = {};
 "weekTotalEl","weekChartEl","longestStreakEl","longestDayEl","longestSessionEl","leaderListEl",
 "leaderRefreshBtn","leaderSummaryEl","historyListEl","displayNameInput","dailyMinInput","settingsSaveBtn","settingsMsgEl",
 "accountInfoEl","configInfoEl","editModal","editStartInput","editEndInput","editMsgEl","editSaveBtn",
-"editCancelBtn","sessionNoteInput","achievementList","avgDayEl","bestDayEl","focusScoreEl","trendEl"
+"editCancelBtn","sessionNoteInput","achievementList","avgDayEl","bestDayEl","focusScoreEl","trendEl",
+"motivationQuoteEl","motivationAuthorEl","quoteRefreshBtn"
 ].forEach((id) => { els[id] = $(id); });
 
 let sb = null;
@@ -291,6 +292,9 @@ function toggleTheme() {
   localStorage.setItem("focuspact-theme", themeMode);
   applyTheme();
 }
+function initMotivation() {
+  renderMotivationQuote();
+}
 function updatePresetButtons() {
   document.querySelectorAll(".preset-btn").forEach((button) => {
     button.classList.toggle("active", Number(button.dataset.preset) === currentPresetMinutes);
@@ -331,6 +335,58 @@ function switchAuthMode(mode) {
     setTimeout(() => els.signupEmailInput && els.signupEmailInput.focus(), 0);
   }
 }
+const MOTIVATION_QUOTES = [
+  { text: "Discipline is choosing what you want most over what you want now.", author: "Abraham Lincoln" },
+  { text: "Success is the sum of small efforts, repeated day in and day out.", author: "Robert Collier" },
+  { text: "You do not rise to the level of your goals. You fall to the level of your systems.", author: "James Clear" },
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "Hard days build strong habits. Strong habits build strong lives.", author: "Focus Pact" },
+  { text: "Small steps every day turn into giant results over time.", author: "Unknown" },
+  { text: "Do not wait for motivation. Build momentum and let it follow.", author: "Focus Pact" },
+  { text: "Your effort compounds, even when no one is watching.", author: "Focus Pact" },
+  { text: "Consistency is the quiet power behind every breakthrough.", author: "Focus Pact" },
+  { text: "You are not behind. You are building.", author: "Focus Pact" },
+  { text: "Pain is temporary. Progress is permanent when you keep going.", author: "Focus Pact" },
+  { text: "When you feel tired, remember why you started.", author: "Focus Pact" }
+];
+
+function getTodayBucket() {
+  const now = new Date();
+  const bucket = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return bucket.getTime();
+}
+
+function getMotivationIndex() {
+  const bucket = getTodayBucket();
+  const stored = localStorage.getItem("focuspact-motivation-bucket");
+  const storedIndex = Number(localStorage.getItem("focuspact-motivation-index") || 0);
+
+  if (stored && Number(stored) === bucket) {
+    return Number.isFinite(storedIndex) ? storedIndex : 0;
+  }
+
+  return Math.floor(Math.random() * MOTIVATION_QUOTES.length);
+}
+
+function renderMotivationQuote(forceIndex = null) {
+  const safeIndex = forceIndex == null ? getMotivationIndex() : forceIndex;
+  const item = MOTIVATION_QUOTES[safeIndex % MOTIVATION_QUOTES.length] || MOTIVATION_QUOTES[0];
+  const bucket = getTodayBucket();
+
+  localStorage.setItem("focuspact-motivation-bucket", String(bucket));
+  localStorage.setItem("focuspact-motivation-index", String(safeIndex));
+
+  if (els.motivationQuoteEl) els.motivationQuoteEl.textContent = '“' + item.text + '”';
+  if (els.motivationAuthorEl) els.motivationAuthorEl.textContent = "— " + item.author;
+}
+
+function refreshMotivationQuote() {
+  let next = getMotivationIndex();
+  if (next === MOTIVATION_QUOTES.length - 1) next = 0;
+  else next += 1;
+  renderMotivationQuote(next);
+}
+
 function showAuth() {
   els.authView.hidden = false;
   els.mainView.hidden = true;
@@ -498,6 +554,7 @@ async function boot() {
   });
   if (user) onSignedIn();
   else showAuth();
+  initMotivation();
 }
 
 async function onSignedIn() {
@@ -1031,6 +1088,7 @@ els.leaderRefreshBtn.addEventListener("click", refreshLeaderboard);
 els.settingsSaveBtn.addEventListener("click", saveSettings);
 els.editSaveBtn.addEventListener("click", saveEdit);
 els.editCancelBtn.addEventListener("click", () => { els.editModal.hidden = true; editingId = null; });
+els.quoteRefreshBtn && els.quoteRefreshBtn.addEventListener("click", refreshMotivationQuote);
 document.querySelectorAll(".nav-btn").forEach((b) => {
   b.addEventListener("click", () => switchTab(b.dataset.tab));
 });
