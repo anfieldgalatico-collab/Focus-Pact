@@ -92,13 +92,15 @@ const DAY_MS = 86400000;
 
 const $ = (id) => document.getElementById(id);
 const els = {};
-["authView","mainView","bottomNav","emailInput","usernameInput","passwordInput","loginBtn","signupBtn","authMsgEl",
-"userLabelEl","logoutBtn","timerStatusEl","timerDisplayEl","timerMetaEl","focusStartBtn","focusPauseBtn",
-"focusStopBtn","breakToggleBtn","todayDateEl","todayFocusEl","todayBreakEl","streakEl","goalBarEl",
-"goalTextEl","weekTotalEl","weekChartEl","longestStreakEl","longestDayEl","longestSessionEl",
-"leaderListEl","leaderRefreshBtn","historyListEl","displayNameInput","dailyMinInput","settingsSaveBtn",
-"settingsMsgEl","accountInfoEl","configInfoEl","editModal","editStartInput","editEndInput","editMsgEl",
-"editSaveBtn","editCancelBtn"
+["authView","authModal","openAuthModalBtn","mainView","bottomNav","loginPanel","signupPanel",
+"loginUsernameInput","loginPasswordInput","signupEmailInput","signupUsernameInput","signupPasswordInput",
+"loginBtn","signupBtn","showSignupBtn","showLoginBtn","authMsgEl","userLabelEl","logoutBtn","themeToggleBtn",
+"notifyToggleBtn","timerStatusEl","timerDisplayEl","timerMetaEl","focusStartBtn","focusPauseBtn","focusStopBtn",
+"breakToggleBtn","todayDateEl","todayFocusEl","todayBreakEl","streakEl","goalBarEl","goalTextEl",
+"weekTotalEl","weekChartEl","longestStreakEl","longestDayEl","longestSessionEl","leaderListEl",
+"leaderRefreshBtn","leaderSummaryEl","historyListEl","displayNameInput","dailyMinInput","settingsSaveBtn","settingsMsgEl",
+"accountInfoEl","configInfoEl","editModal","editStartInput","editEndInput","editMsgEl","editSaveBtn",
+"editCancelBtn","sessionNoteInput","achievementList","avgDayEl","bestDayEl","focusScoreEl","trendEl"
 ].forEach((id) => { els[id] = $(id); });
 
 let sb = null;
@@ -109,6 +111,8 @@ let activeSession = null;
 let editingId = null;
 let tickTimer = null;
 let lastStatsAt = 0;
+let currentPresetMinutes = Number(localStorage.getItem("focuspact-preset") || 25);
+let themeMode = localStorage.getItem("focuspact-theme") || "dark";
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
@@ -253,12 +257,65 @@ function computeStats(sessions, dailyMinSec, nowMs) {
 
 // ---------- UI helpers ----------
 function setMsg(el, text) { el.textContent = text || ""; }
+function applyTheme() {
+  document.body.dataset.theme = themeMode;
+  if (els.themeToggleBtn) {
+    els.themeToggleBtn.textContent = themeMode === "dark" ? "☀️" : "🌙";
+  }
+}
+function toggleTheme() {
+  themeMode = themeMode === "dark" ? "light" : "dark";
+  localStorage.setItem("focuspact-theme", themeMode);
+  applyTheme();
+}
+function updatePresetButtons() {
+  document.querySelectorAll(".preset-btn").forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.preset) === currentPresetMinutes);
+  });
+}
+function showNotification(title, body) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    new Notification(title, { body });
+  }
+}
+function updateNotificationButton() {
+  if (!els.notifyToggleBtn) return;
+  const enabled = Notification.permission === "granted";
+  els.notifyToggleBtn.textContent = enabled ? "Alerts on" : "Alerts off";
+  els.notifyToggleBtn.classList.toggle("active", enabled);
+}
+function askNotificationPermission() {
+  if (!("Notification" in window)) {
+    setMsg(els.authMsgEl, "This browser does not support notifications.");
+    return;
+  }
+  Notification.requestPermission().then((permission) => {
+    if (permission === "granted") {
+      updateNotificationButton();
+      showNotification("Focus Pact", "Notifications enabled.");
+    }
+  });
+}
+function switchAuthMode(mode) {
+  const isLogin = mode === "login";
+  els.loginPanel.hidden = !isLogin;
+  els.signupPanel.hidden = isLogin;
+  setMsg(els.authMsgEl, "");
+  if (isLogin) {
+    setTimeout(() => els.loginUsernameInput && els.loginUsernameInput.focus(), 0);
+  } else {
+    setTimeout(() => els.signupEmailInput && els.signupEmailInput.focus(), 0);
+  }
+}
 function showAuth() {
   els.authView.hidden = false;
   els.mainView.hidden = true;
   els.bottomNav.hidden = true;
   els.logoutBtn.hidden = true;
   els.userLabelEl.textContent = "";
+  els.authModal.hidden = false;
+  switchAuthMode("login");
 }
 function showMain() {
   els.authView.hidden = true;
@@ -280,6 +337,30 @@ function switchTab(name) {
 
 // ---------- Auth + usernames ----------
 const PENDING_USER_KEY = "focuspact_pending_username";
+const LOCAL_USER_MAP_KEY = "focuspact_local_user_map";
+
+function getStoredUserMap() {
+  try {
+    const raw = localStorage.getItem(LOCAL_USER_MAP_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+function saveStoredUserMap(map) {
+  try { localStorage.setItem(LOCAL_USER_MAP_KEY, JSON.stringify(map)); } catch (e) {}
+}
+function rememberLocalUser(username, email) {
+  if (!username || !email) return;
+  const map = getStoredUserMap();
+  map[cleanUsername(username)] = String(email).trim().toLowerCase();
+  saveStoredUserMap(map);
+}
+function lookupLocalUserEmail(username) {
+  const clean = cleanUsername(username);
+  if (!clean) return "";
+  return getStoredUserMap()[clean] || "";
+}
 function cleanUsername(v) {
   return String(v || "").trim().replace(/\s+/g, "_").slice(0, 30);
 }
@@ -324,7 +405,7 @@ async function ensureProfile() {
   try { localStorage.removeItem(PENDING_USER_KEY); } catch (e) {}
   els.displayNameInput.value = profile.display_name || "";
   els.dailyMinInput.value = String(profile.daily_min_minutes || 60);
-  if (els.usernameInput && !els.usernameInput.value) els.usernameInput.value = profile.display_name || "";
+  if (els.signupUsernameInput && !els.signupUsernameInput.value) els.signupUsernameInput.value = profile.display_name || "";
   els.userLabelEl.textContent = profile.display_name || "friend";
   els.accountInfoEl.textContent = "Username " + (profile.display_name || "friend");
 }
@@ -428,8 +509,24 @@ async function startFocus() {
       await resumeFocus();
       return;
     }
-    await dbInsertSession("focus");
+
+    const note = (els.sessionNoteInput && els.sessionNoteInput.value || "").trim();
+    if (note) localStorage.setItem("focuspact-last-note", note);
+    const sessionSeconds = currentPresetMinutes * 60;
+    const started = new Date();
+    const row = { user_id: user.id, kind: "focus", start_at: started.toISOString(), session_note: note || null };
+
+    const { data, error } = await sb.from("sessions").insert(row).select().single();
+    if (error) throw error;
+    mySessions.unshift(data);
+    activeSession = data;
     renderDashboard();
+    if (Notification.permission === "granted") {
+      showNotification("Focus started", note ? "Working on: " + note : "Focus timer started.");
+    }
+    if (sessionSeconds > 0) {
+      localStorage.setItem("focuspact-last-focus-seconds", String(sessionSeconds));
+    }
   } catch (e) { alert("Start failed: " + (e.message || e)); }
 }
 async function pauseFocus() {
@@ -484,12 +581,45 @@ function activeElapsedSec() {
   if (!activeSession) return 0;
   return effectiveSec(activeSession, Date.now());
 }
+function renderAchievements() {
+  const totalFocusSec = (mySessions || []).reduce((sum, s) => {
+    if (s.kind !== "focus") return sum;
+    return sum + effectiveSec(s, Date.now());
+  }, 0);
+  const streak = computeStats(mySessions, (profile.daily_min_minutes || 60) * 60, Date.now()).currentStreak;
+  const longestSession = Math.max(0, ...mySessions.filter((s) => s.kind === "focus").map((s) => effectiveSec(s, Date.now())));
+
+  const items = [
+    { badge: "🔥", name: "3 day streak", unlocked: streak >= 3 },
+    { badge: "⚡", name: "5h focused", unlocked: totalFocusSec >= 18000 },
+    { badge: "🏆", name: "Longest session 30m", unlocked: longestSession >= 1800 },
+    { badge: "💡", name: "Daily goal hit", unlocked: totalFocusSec >= (profile.daily_min_minutes || 60) * 60 }
+  ];
+
+  els.achievementList.innerHTML = items.map((item) => `
+    <div class="achievement-item ${item.unlocked ? "unlocked" : ""}">
+      <span class="badge">${item.badge}</span>
+      <span class="name">${item.name}</span>
+    </div>
+  `).join("");
+}
 function renderDashboard() {
   if (!user) return;
   const nowMs = Date.now();
   const dailyMinSec = (profile.daily_min_minutes || 60) * 60;
   const st = computeStats(mySessions, dailyMinSec, nowMs);
+  const avgPerDay = st.weekTotal / 7;
+  const bestDay = Math.max(...st.weekPerDay, 0);
+  const score = dailyMinSec > 0 ? Math.min(100, (st.todayFocus / dailyMinSec) * 100) : 0;
+  const trend = st.weekTotal > 0
+    ? "Momentum is up this week."
+    : "Start a focus session to build momentum.";
 
+  renderAchievements();
+  els.avgDayEl.textContent = fmtHours(avgPerDay);
+  els.bestDayEl.textContent = fmtHours(bestDay);
+  els.focusScoreEl.textContent = Math.round(score) + "%";
+  els.trendEl.textContent = trend;
   els.todayDateEl.textContent = st.todayStr;
   els.todayFocusEl.textContent = fmtHours(st.todayFocus);
   els.todayBreakEl.textContent = fmtBreak(st.todayBreak);
@@ -535,8 +665,10 @@ function updateTimerUI(nowMs) {
   } else {
     const kind = a.kind === "focus" ? "Focus" : "Break";
     const extra = (a.kind === "focus" && a.is_paused) ? " (paused)" : "";
+    const note = (a.session_note || localStorage.getItem("focuspact-last-note") || "");
+    const noteText = note ? " · " + note : "";
     els.timerMetaEl.textContent = kind + " since " +
-      lagosTimeFmt.format(new Date(a.start_at)) + " Lagos" + extra;
+      lagosTimeFmt.format(new Date(a.start_at)) + " Lagos" + noteText + extra;
   }
   const focusActive = !!(a && a.kind === "focus");
   const breakActive = !!(a && a.kind === "break");
@@ -591,6 +723,8 @@ async function refreshLeaderboard() {
     });
     rows.sort((a, b) => b.week - a.week);
     const topWeek = rows.length ? rows[0].week : 0;
+    const myRank = rows.findIndex((row) => row.id === user.id) + 1;
+    els.leaderSummaryEl.textContent = myRank > 0 ? "#" + myRank + " overall · " + fmtHours(topWeek) + " leader" : "No rankings yet";
     let html = "";
     rows.forEach((r, i) => {
       const isTop = i === 0 && rows.length > 1 && r.week > 0;
@@ -734,17 +868,66 @@ async function saveSettings() {
 }
 
 // ---------- Events ----------
+els.openAuthModalBtn.addEventListener("click", () => {
+  els.authModal.hidden = false;
+  switchAuthMode("login");
+});
+els.authModal.addEventListener("click", (event) => {
+  if (event.target === els.authModal) {
+    els.authModal.hidden = true;
+  }
+});
+document.querySelectorAll(".preset-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    currentPresetMinutes = Number(button.dataset.preset);
+    localStorage.setItem("focuspact-preset", String(currentPresetMinutes));
+    updatePresetButtons();
+  });
+});
+els.themeToggleBtn.addEventListener("click", toggleTheme);
+els.notifyToggleBtn.addEventListener("click", () => {
+  if (Notification.permission === "granted") {
+    showNotification("Focus Pact", "Notifications are already enabled.");
+    return;
+  }
+  askNotificationPermission();
+});
 els.loginBtn.addEventListener("click", async () => {
+  const username = cleanUsername(els.loginUsernameInput.value);
+  const password = els.loginPasswordInput.value;
+
+  if (!username || !password) {
+    setMsg(els.authMsgEl, "Enter your username and password.");
+    return;
+  }
+
   setMsg(els.authMsgEl, "Logging in…");
   try {
+    const localEmail = lookupLocalUserEmail(username);
+    const email = localEmail || (username.includes("@") ? username : "");
+
+    if (!email) {
+      setMsg(els.authMsgEl, "Sign up first, or use the email linked to your account.");
+      return;
+    }
+
     const { error } = await sb.auth.signInWithPassword({
-      email: els.emailInput.value.trim(), password: els.passwordInput.value
+      email: email,
+      password: password
     });
     if (error) throw error;
+    els.authModal.hidden = true;
   } catch (e) { setMsg(els.authMsgEl, e.message || String(e)); }
 });
 els.signupBtn.addEventListener("click", async () => {
-  const uname = cleanUsername(els.usernameInput ? els.usernameInput.value : "");
+  const email = (els.signupEmailInput ? els.signupEmailInput.value : "").trim();
+  const uname = cleanUsername(els.signupUsernameInput ? els.signupUsernameInput.value : "");
+  const password = els.signupPasswordInput ? els.signupPasswordInput.value : "";
+
+  if (!email || !uname || !password) {
+    setMsg(els.authMsgEl, "Email, username, and password are all required.");
+    return;
+  }
   if (!validUsername(uname)) {
     setMsg(els.authMsgEl, "Pick a username: 3-30 chars, letters/numbers/_ . - only.");
     return;
@@ -757,17 +940,24 @@ els.signupBtn.addEventListener("click", async () => {
     }
     try { localStorage.setItem(PENDING_USER_KEY, uname); } catch (e) {}
     const { data, error } = await sb.auth.signUp({
-      email: els.emailInput.value.trim(), password: els.passwordInput.value,
+      email: email,
+      password: password,
       options: { data: { display_name: uname } }
     });
     if (error) throw error;
+    rememberLocalUser(uname, email);
     if (data && data.session && data.session.user) {
       setMsg(els.authMsgEl, "Account created. Welcome, " + uname + "!");
     } else {
       setMsg(els.authMsgEl, "Account created as " + uname + ". If email confirmation is on, confirm then log in (username saved).");
     }
+    switchAuthMode("login");
+    els.loginUsernameInput.value = uname;
+    els.loginPasswordInput.value = password;
   } catch (e) { setMsg(els.authMsgEl, e.message || String(e)); }
 });
+els.showSignupBtn.addEventListener("click", () => switchAuthMode("signup"));
+els.showLoginBtn.addEventListener("click", () => switchAuthMode("login"));
 els.logoutBtn.addEventListener("click", async () => { await sb.auth.signOut(); });
 els.focusStartBtn.addEventListener("click", startFocus);
 els.focusStopBtn.addEventListener("click", stopActive);
@@ -789,5 +979,8 @@ document.addEventListener("visibilitychange", async () => {
   }
 });
 
+applyTheme();
+updatePresetButtons();
+updateNotificationButton();
 boot();
 })();

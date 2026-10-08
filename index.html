@@ -4,32 +4,75 @@
   <header class="topbar">
     <div class="brand">Focus Pact</div>
     <div class="top-right">
+      <button id="themeToggleBtn" class="icon-btn" type="button" aria-label="Toggle theme">☀️</button>
+      <button id="notifyToggleBtn" class="btn small ghost" type="button">Alerts off</button>
       <span id="userLabelEl" class="user-label"></span>
       <button id="logoutBtn" class="btn small ghost" hidden>Log out</button>
     </div>
   </header>
 
   <section id="authView" class="card">
-    <h2>Welcome back</h2>
-    <p class="muted">Log in or create an account to track focus with friends.</p>
-    <label class="field">
-      <span>Email</span>
-      <input id="emailInput" type="email" autocomplete="email" placeholder="you@example.com">
-    </label>
-    <label class="field">
-      <span>Username</span>
-      <input id="usernameInput" type="text" autocomplete="nickname" name="focuspact-username" maxlength="30" placeholder="username">
-    </label>
-    <label class="field">
-      <span>Password</span>
-      <input id="passwordInput" type="password" autocomplete="current-password" placeholder="••••••••">
-    </label>
-    <div class="row">
-      <button id="loginBtn" class="btn primary">Log in</button>
-      <button id="signupBtn" class="btn">Sign up</button>
+    <div class="auth-intro">
+      <h2>Stay locked in.</h2>
+      <p class="muted">Track focus, streaks, and progress with your team.</p>
     </div>
+
+    <button id="openAuthModalBtn" class="btn primary auth-cta">Log in</button>
     <p id="authMsgEl" class="msg" aria-live="polite"></p>
   </section>
+
+  <div id="authModal" class="modal" hidden>
+    <div class="modal-box auth-modal-box">
+      <div id="loginPanel" class="auth-panel">
+        <h2>Welcome back</h2>
+        <p class="muted">Log in to keep your focus streak alive.</p>
+
+        <label class="field">
+          <span>Username</span>
+          <input id="loginUsernameInput" type="text" autocomplete="username" name="focuspact-login-username" maxlength="30" placeholder="username">
+        </label>
+
+        <label class="field">
+          <span>Password</span>
+          <input id="loginPasswordInput" type="password" autocomplete="current-password" placeholder="••••••••">
+        </label>
+
+        <button id="loginBtn" class="btn primary">Log in</button>
+
+        <p class="auth-switch">
+          Don’t have an account?
+          <button id="showSignupBtn" class="link-btn" type="button">Sign up</button>
+        </p>
+      </div>
+
+      <div id="signupPanel" class="auth-panel" hidden>
+        <h2>Create account</h2>
+        <p class="muted">Sign up to track focus, streaks, and progress.</p>
+
+        <label class="field">
+          <span>Email</span>
+          <input id="signupEmailInput" type="email" autocomplete="email" placeholder="you@example.com">
+        </label>
+
+        <label class="field">
+          <span>Username</span>
+          <input id="signupUsernameInput" type="text" autocomplete="nickname" name="focuspact-signup-username" maxlength="30" placeholder="username">
+        </label>
+
+        <label class="field">
+          <span>Password</span>
+          <input id="signupPasswordInput" type="password" autocomplete="new-password" placeholder="••••••••">
+        </label>
+
+        <button id="signupBtn" class="btn primary">Sign up</button>
+
+        <p class="auth-switch">
+          Already have an account?
+          <button id="showLoginBtn" class="link-btn" type="button">Log in</button>
+        </p>
+      </div>
+    </div>
+  </div>
 
   <main id="mainView" hidden>
     <section id="tab-dashboard" class="tab-page">
@@ -37,12 +80,49 @@
         <div id="timerStatusEl" class="status">Idle</div>
         <div id="timerDisplayEl" class="timer">00:00:00</div>
         <div id="timerMetaEl" class="muted small">No active session</div>
+
+        <div class="preset-row" aria-label="Timer presets">
+          <button class="preset-btn active" data-preset="25" type="button">25m</button>
+          <button class="preset-btn" data-preset="50" type="button">50m</button>
+          <button class="preset-btn" data-preset="90" type="button">90m</button>
+          <button class="preset-btn" data-preset="120" type="button">2h</button>
+        </div>
+
+        <label class="task-field">
+          <span>Session tag</span>
+          <input id="sessionNoteInput" type="text" maxlength="40" placeholder="Deep work, study, coding...">
+        </label>
+
         <div class="timer-btns">
           <button id="focusStartBtn" class="btn primary big">Start</button>
           <button id="focusPauseBtn" class="btn big" disabled>Pause</button>
           <button id="focusStopBtn" class="btn danger big" disabled>Stop</button>
         </div>
         <button id="breakToggleBtn" class="btn break-btn">Start break</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Momentum</div>
+        <div id="achievementList" class="achievement-grid"></div>
+      </div>
+
+      <div class="card analytics-card">
+        <div class="card-title">Insights</div>
+        <div class="analytics-grid">
+          <div class="analytics-metric">
+            <span>Avg / day</span>
+            <strong id="avgDayEl">0h</strong>
+          </div>
+          <div class="analytics-metric">
+            <span>Best day</span>
+            <strong id="bestDayEl">0h</strong>
+          </div>
+          <div class="analytics-metric">
+            <span>Focus score</span>
+            <strong id="focusScoreEl">0%</strong>
+          </div>
+        </div>
+        <div id="trendEl" class="trend-line muted small"></div>
       </div>
 
       <div class="card">
@@ -86,6 +166,10 @@
     <section id="tab-leaderboard" class="tab-page" hidden>
       <div class="card">
         <div class="card-title">Leaderboard</div>
+        <div class="leader-summary">
+          <span class="muted small">7-day ranking</span>
+          <strong id="leaderSummaryEl">Top focus week</strong>
+        </div>
         <p class="muted small">Tap a row for a week breakdown. Times in Africa/Lagos days.</p>
         <div id="leaderListEl"></div>
         <button id="leaderRefreshBtn" class="btn small">Refresh</button>
