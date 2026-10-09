@@ -124,7 +124,8 @@ const els = {};
 "leaderRefreshBtn","leaderSummaryEl","historyListEl","displayNameInput","dailyMinInput","settingsSaveBtn","settingsMsgEl",
 "accountInfoEl","configInfoEl","editModal","editStartInput","editEndInput","editMsgEl","editSaveBtn",
 "editCancelBtn","sessionNoteInput","achievementList","avgDayEl","bestDayEl","focusScoreEl","trendEl",
-"motivationQuoteEl","motivationAuthorEl","quoteRefreshBtn"
+"motivationQuoteEl","motivationAuthorEl","quoteRefreshBtn",
+"countdownStatusEl","countdownDisplayEl","countdownMetaEl","countdownLabelInput","cdStartBtn","cdPauseBtn","cdResetBtn","countdownBarEl","countdownProgressTextEl"
 ].forEach((id) => { els[id] = $(id); });
 
 let sb = null;
@@ -137,6 +138,15 @@ let tickTimer = null;
 let lastStatsAt = 0;
 let currentPresetMinutes = Number(localStorage.getItem("focuspact-preset") || 25);
 let themeMode = localStorage.getItem("focuspact-theme") || "dark";
+
+// ---- Countdown state ----
+let cdPresetMinutes = Number(localStorage.getItem("lockin-cd-preset") || 25);
+let cdTotalSec = cdPresetMinutes * 60;   // total target seconds
+let cdRemainingMs = cdTotalSec * 1000;   // ms remaining
+let cdRunning = false;
+let cdPaused = false;
+let cdInterval = null;
+let cdLastTick = null;
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
@@ -320,7 +330,7 @@ function askNotificationPermission() {
   Notification.requestPermission().then((permission) => {
     if (permission === "granted") {
       updateNotificationButton();
-      showNotification("Focus Pact", "Notifications enabled.");
+      showNotification("Lockin Fam", "Notifications enabled.");
     }
   });
 }
@@ -340,14 +350,14 @@ const MOTIVATION_QUOTES = [
   { text: "Success is the sum of small efforts, repeated day in and day out.", author: "Robert Collier" },
   { text: "You do not rise to the level of your goals. You fall to the level of your systems.", author: "James Clear" },
   { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-  { text: "Hard days build strong habits. Strong habits build strong lives.", author: "Focus Pact" },
+  { text: "Hard days build strong habits. Strong habits build strong lives.", author: "Lockin Fam" },
   { text: "Small steps every day turn into giant results over time.", author: "Unknown" },
-  { text: "Do not wait for motivation. Build momentum and let it follow.", author: "Focus Pact" },
-  { text: "Your effort compounds, even when no one is watching.", author: "Focus Pact" },
-  { text: "Consistency is the quiet power behind every breakthrough.", author: "Focus Pact" },
-  { text: "You are not behind. You are building.", author: "Focus Pact" },
-  { text: "Pain is temporary. Progress is permanent when you keep going.", author: "Focus Pact" },
-  { text: "When you feel tired, remember why you started.", author: "Focus Pact" }
+  { text: "Do not wait for motivation. Build momentum and let it follow.", author: "Lockin Fam" },
+  { text: "Your effort compounds, even when no one is watching.", author: "Lockin Fam" },
+  { text: "Consistency is the quiet power behind every breakthrough.", author: "Lockin Fam" },
+  { text: "You are not behind. You are building.", author: "Lockin Fam" },
+  { text: "Pain is temporary. Progress is permanent when you keep going.", author: "Lockin Fam" },
+  { text: "When you feel tired, remember why you started.", author: "Lockin Fam" }
 ];
 
 function getTodayBucket() {
@@ -633,7 +643,8 @@ async function startFocus() {
     if (note) localStorage.setItem("focuspact-last-note", note);
     const sessionSeconds = currentPresetMinutes * 60;
     const started = new Date();
-    const row = { user_id: user.id, kind: "focus", start_at: started.toISOString(), session_note: note || null };
+    // NOTE: session_note column removed — not in DB schema. Tag is stored in localStorage only.
+    const row = { user_id: user.id, kind: "focus", start_at: started.toISOString() };
 
     const { data, error } = await sb.from("sessions").insert(row).select().single();
     if (error) throw error;
@@ -641,7 +652,7 @@ async function startFocus() {
     activeSession = data;
     renderDashboard();
     if (Notification.permission === "granted") {
-      showNotification("Focus started", note ? "Working on: " + note : "Focus timer started.");
+      showNotification("Lockin Fam", note ? "Working on: " + note : "Focus timer started.");
     }
     if (sessionSeconds > 0) {
       localStorage.setItem("focuspact-last-focus-seconds", String(sessionSeconds));
@@ -784,7 +795,7 @@ function updateTimerUI(nowMs) {
   } else {
     const kind = a.kind === "focus" ? "Focus" : "Break";
     const extra = (a.kind === "focus" && a.is_paused) ? " (paused)" : "";
-    const note = (a.session_note || localStorage.getItem("focuspact-last-note") || "");
+    const note = (localStorage.getItem("focuspact-last-note") || "");
     const noteText = note ? " · " + note : "";
     els.timerMetaEl.textContent = kind + " since " +
       lagosTimeFmt.format(new Date(a.start_at)) + " Lagos" + noteText + extra;
@@ -986,6 +997,191 @@ async function saveSettings() {
   } catch (e) { setMsg(els.settingsMsgEl, "Save failed: " + (e.message || e)); }
 }
 
+// ===================== COUNTDOWN TIMER =====================
+function cdFmtClock(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return pad2(h) + ":" + pad2(m) + ":" + pad2(s);
+}
+
+function updateCdPresetButtons() {
+  document.querySelectorAll(".cd-preset-btn").forEach((btn) => {
+    btn.classList.toggle("active", Number(btn.dataset.cdpreset) === cdPresetMinutes);
+  });
+}
+
+function renderCountdownUI() {
+  const rem = Math.max(0, cdRemainingMs);
+  const total = cdTotalSec * 1000;
+  const pct = total > 0 ? Math.min(100, ((total - rem) / total) * 100) : 0;
+
+  if (els.countdownDisplayEl) els.countdownDisplayEl.textContent = cdFmtClock(rem);
+
+  if (els.countdownBarEl) els.countdownBarEl.style.width = pct.toFixed(1) + "%";
+
+  const remSec = Math.ceil(rem / 1000);
+  const remMin = Math.floor(remSec / 60);
+  const remSecPart = remSec % 60;
+  const remLabel = remMin > 0 ? remMin + "m " + remSecPart + "s left" : remSecPart + "s left";
+  if (els.countdownProgressTextEl) {
+    els.countdownProgressTextEl.textContent = (rem > 0 && cdRunning) ? remLabel : (rem <= 0 && cdRunning ? "Done!" : "");
+  }
+
+  let status = "Ready", statusCls = "status";
+  if (cdRunning && !cdPaused && rem > 0) { status = "Running"; statusCls += " live"; }
+  else if (cdPaused) { status = "Paused"; statusCls += " paused"; }
+  else if (rem <= 0 && cdTotalSec > 0) { status = "Done!"; statusCls += " live"; }
+  if (els.countdownStatusEl) {
+    els.countdownStatusEl.textContent = status;
+    els.countdownStatusEl.className = statusCls;
+  }
+
+  const label = els.countdownLabelInput ? els.countdownLabelInput.value.trim() : "";
+  if (els.countdownMetaEl) {
+    if (!cdRunning && !cdPaused && cdRemainingMs === cdTotalSec * 1000) {
+      els.countdownMetaEl.textContent = "Set a duration and hit Start";
+    } else if (label) {
+      els.countdownMetaEl.textContent = label;
+    } else {
+      els.countdownMetaEl.textContent = cdFmtClock(cdTotalSec * 1000) + " session";
+    }
+  }
+
+  if (els.cdStartBtn) {
+    if (cdRunning && !cdPaused) {
+      els.cdStartBtn.textContent = "Running…";
+      els.cdStartBtn.disabled = true;
+    } else if (cdPaused) {
+      els.cdStartBtn.textContent = "Resume";
+      els.cdStartBtn.disabled = false;
+    } else {
+      els.cdStartBtn.textContent = "Start";
+      els.cdStartBtn.disabled = false;
+    }
+  }
+  if (els.cdPauseBtn) {
+    els.cdPauseBtn.disabled = !cdRunning || cdRemainingMs <= 0;
+    els.cdPauseBtn.textContent = cdPaused ? "Resume" : "Pause";
+  }
+}
+
+function cdTick() {
+  const now = Date.now();
+  const elapsed = cdLastTick !== null ? (now - cdLastTick) : 0;
+  cdLastTick = now;
+  cdRemainingMs = Math.max(0, cdRemainingMs - elapsed);
+  renderCountdownUI();
+  if (cdRemainingMs <= 0) {
+    cdRunning = false;
+    cdPaused = false;
+    clearInterval(cdInterval);
+    cdInterval = null;
+    // Fire notification
+    if (Notification.permission === "granted") {
+      const label = els.countdownLabelInput ? els.countdownLabelInput.value.trim() : "";
+      showNotification("Lockin Fam ⏰", label ? label + " — time's up!" : "Countdown finished! Great work.");
+    }
+    // Chime using Web Audio API
+    cdPlayChime();
+    renderCountdownUI();
+  }
+}
+
+function cdPlayChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const tones = [523.25, 659.25, 783.99]; // C5, E5, G5
+    tones.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + i * 0.22;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.28, start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.55);
+      osc.start(start);
+      osc.stop(start + 0.55);
+    });
+  } catch (e) { /* audio not available */ }
+}
+
+function cdStart() {
+  if (cdPaused) {
+    // Resume
+    cdPaused = false;
+    cdLastTick = Date.now();
+    cdRunning = true;
+    cdInterval = setInterval(cdTick, 200);
+    renderCountdownUI();
+    return;
+  }
+  if (cdRunning) return;
+  // Start fresh
+  cdRemainingMs = cdTotalSec * 1000;
+  cdRunning = true;
+  cdPaused = false;
+  cdLastTick = Date.now();
+  clearInterval(cdInterval);
+  cdInterval = setInterval(cdTick, 200);
+  renderCountdownUI();
+}
+
+function cdPauseToggle() {
+  if (!cdRunning) return;
+  if (cdPaused) {
+    cdPaused = false;
+    cdLastTick = Date.now();
+    cdInterval = setInterval(cdTick, 200);
+  } else {
+    cdPaused = true;
+    clearInterval(cdInterval);
+    cdInterval = null;
+  }
+  renderCountdownUI();
+}
+
+function cdReset() {
+  cdRunning = false;
+  cdPaused = false;
+  clearInterval(cdInterval);
+  cdInterval = null;
+  cdRemainingMs = cdTotalSec * 1000;
+  renderCountdownUI();
+}
+
+// CD preset buttons
+document.querySelectorAll(".cd-preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    cdPresetMinutes = Number(btn.dataset.cdpreset);
+    localStorage.setItem("lockin-cd-preset", String(cdPresetMinutes));
+    cdTotalSec = cdPresetMinutes * 60;
+    cdRemainingMs = cdTotalSec * 1000;
+    cdRunning = false;
+    cdPaused = false;
+    clearInterval(cdInterval);
+    cdInterval = null;
+    updateCdPresetButtons();
+    renderCountdownUI();
+  });
+});
+
+if (els.cdStartBtn) els.cdStartBtn.addEventListener("click", () => {
+  if (cdPaused) { cdStart(); }
+  else { cdStart(); }
+});
+if (els.cdPauseBtn) els.cdPauseBtn.addEventListener("click", cdPauseToggle);
+if (els.cdResetBtn) els.cdResetBtn.addEventListener("click", cdReset);
+
+// Init countdown display on page load
+updateCdPresetButtons();
+renderCountdownUI();
+// ===================== END COUNTDOWN =====================
+
 // ---------- Events ----------
 els.openAuthModalBtn.addEventListener("click", () => {
   els.authModal.hidden = false;
@@ -1006,7 +1202,7 @@ document.querySelectorAll(".preset-btn").forEach((button) => {
 els.themeToggleBtn.addEventListener("click", toggleTheme);
 els.notifyToggleBtn.addEventListener("click", () => {
   if (Notification.permission === "granted") {
-    showNotification("Focus Pact", "Notifications are already enabled.");
+    showNotification("Lockin Fam", "Notifications are already enabled.");
     return;
   }
   askNotificationPermission();

@@ -1,8 +1,16 @@
-<link rel="stylesheet" href="style.css">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lockin Fam</title>
+  <meta name="description" content="Track focus, streaks, and progress with your team.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 <div class="app">
   <header class="topbar">
-    <div class="brand">Focus Pact</div>
+    <div class="brand">Lockin Fam</div>
     <div class="top-right">
       <button id="themeToggleBtn" class="icon-btn" type="button" aria-label="Toggle theme">☀️</button>
       <button id="notifyToggleBtn" class="btn small ghost" type="button">Alerts off</button>
@@ -40,7 +48,7 @@
         <button id="loginBtn" class="btn primary">Log in</button>
 
         <p class="auth-switch">
-          Don’t have an account?
+          Don't have an account?
           <button id="showSignupBtn" class="link-btn" type="button">Sign up</button>
         </p>
       </div>
@@ -76,7 +84,41 @@
 
   <main id="mainView" hidden>
     <section id="tab-dashboard" class="tab-page">
+
+      <!-- ===== COUNTDOWN SECTION (appears first) ===== -->
+      <div class="card countdown-card">
+        <div class="card-title">Countdown Timer</div>
+        <div id="countdownStatusEl" class="status">Ready</div>
+        <div id="countdownDisplayEl" class="timer countdown-timer">00:00:00</div>
+        <div id="countdownMetaEl" class="muted small">Set a duration and hit Start</div>
+
+        <div class="preset-row" aria-label="Countdown presets">
+          <button class="cd-preset-btn active" data-cdpreset="25" type="button">25m</button>
+          <button class="cd-preset-btn" data-cdpreset="50" type="button">50m</button>
+          <button class="cd-preset-btn" data-cdpreset="90" type="button">90m</button>
+          <button class="cd-preset-btn" data-cdpreset="120" type="button">2h</button>
+        </div>
+
+        <label class="task-field">
+          <span>Countdown label</span>
+          <input id="countdownLabelInput" type="text" maxlength="40" placeholder="Deep work, study, coding...">
+        </label>
+
+        <div class="timer-btns">
+          <button id="cdStartBtn" class="btn primary big">Start</button>
+          <button id="cdPauseBtn" class="btn big" disabled>Pause</button>
+          <button id="cdResetBtn" class="btn danger big">Reset</button>
+        </div>
+
+        <div id="countdownProgressRow" class="goal-row">
+          <div class="progress"><div id="countdownBarEl" class="progress-fill cd-progress-fill"></div></div>
+          <div id="countdownProgressTextEl" class="muted small"></div>
+        </div>
+      </div>
+
+      <!-- ===== FOCUS TRACKER (stopwatch) ===== -->
       <div class="card timer-card">
+        <div class="card-title">Focus Tracker</div>
         <div id="timerStatusEl" class="status">Idle</div>
         <div id="timerDisplayEl" class="timer">00:00:00</div>
         <div id="timerMetaEl" class="muted small">No active session</div>
@@ -108,7 +150,7 @@
           <button id="quoteRefreshBtn" class="btn small ghost" type="button">Refresh</button>
         </div>
         <blockquote id="motivationQuoteEl" class="motivation-quote">Keep showing up. Your future self is watching.</blockquote>
-        <p id="motivationAuthorEl" class="motivation-author muted small">Focus Pact</p>
+        <p id="motivationAuthorEl" class="motivation-author muted small">Lockin Fam</p>
       </div>
 
       <div class="card">
@@ -237,3 +279,5 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="script.js"></script>
+</body>
+</html>

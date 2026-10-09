@@ -935,3 +935,28 @@ hr {
   .hist-btns { width: 100%; }
   .hist-btns .btn { flex: 1; }
 }
+
+/* ===== Countdown Timer ===== */
+.countdown-card {
+  border-color: rgba(57, 199, 255, 0.28);
+}
+
+.countdown-card::before {
+  background: linear-gradient(135deg, rgba(57, 199, 255, 0.09), transparent 35%, rgba(124, 92, 255, 0.08));
+}
+
+.countdown-timer {
+  color: var(--accent-2);
+  text-shadow: 0 0 28px rgba(57, 199, 255, 0.35);
+}
+
+.cd-progress-fill {
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  box-shadow: 0 0 18px rgba(57, 199, 255, 0.4);
+}
+
+.countdown-card .status.live {
+  border-color: rgba(94, 230, 167, 0.5);
+  color: var(--green);
+  box-shadow: 0 0 18px rgba(94, 230, 167, 0.2);
+}
