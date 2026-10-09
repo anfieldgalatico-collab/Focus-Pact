@@ -416,8 +416,8 @@ function switchTab(name) {
   document.querySelectorAll(".nav-btn").forEach((b) => {
     b.classList.toggle("active", b.dataset.tab === name);
   });
-  ["dashboard", "leaderboard", "history", "settings"].forEach((t) => {
-    $("tab-" + t).hidden = (t !== name);
+  ["dashboard", "leaderboard", "countdown", "history", "settings"].forEach((t) => {
+    $(("tab-" + t)).hidden = (t !== name);
   });
   if (name === "dashboard") renderDashboard();
   if (name === "leaderboard") refreshLeaderboard();

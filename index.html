@@ -1,13 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Lockin Fam</title>
-  <meta name="description" content="Track focus, streaks, and progress with your team.">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <div class="app">
   <header class="topbar">
     <div class="brand">Lockin Fam</div>
@@ -84,41 +76,7 @@
 
   <main id="mainView" hidden>
     <section id="tab-dashboard" class="tab-page">
-
-      <!-- ===== COUNTDOWN SECTION (appears first) ===== -->
-      <div class="card countdown-card">
-        <div class="card-title">Countdown Timer</div>
-        <div id="countdownStatusEl" class="status">Ready</div>
-        <div id="countdownDisplayEl" class="timer countdown-timer">00:00:00</div>
-        <div id="countdownMetaEl" class="muted small">Set a duration and hit Start</div>
-
-        <div class="preset-row" aria-label="Countdown presets">
-          <button class="cd-preset-btn active" data-cdpreset="25" type="button">25m</button>
-          <button class="cd-preset-btn" data-cdpreset="50" type="button">50m</button>
-          <button class="cd-preset-btn" data-cdpreset="90" type="button">90m</button>
-          <button class="cd-preset-btn" data-cdpreset="120" type="button">2h</button>
-        </div>
-
-        <label class="task-field">
-          <span>Countdown label</span>
-          <input id="countdownLabelInput" type="text" maxlength="40" placeholder="Deep work, study, coding...">
-        </label>
-
-        <div class="timer-btns">
-          <button id="cdStartBtn" class="btn primary big">Start</button>
-          <button id="cdPauseBtn" class="btn big" disabled>Pause</button>
-          <button id="cdResetBtn" class="btn danger big">Reset</button>
-        </div>
-
-        <div id="countdownProgressRow" class="goal-row">
-          <div class="progress"><div id="countdownBarEl" class="progress-fill cd-progress-fill"></div></div>
-          <div id="countdownProgressTextEl" class="muted small"></div>
-        </div>
-      </div>
-
-      <!-- ===== FOCUS TRACKER (stopwatch) ===== -->
       <div class="card timer-card">
-        <div class="card-title">Focus Tracker</div>
         <div id="timerStatusEl" class="status">Idle</div>
         <div id="timerDisplayEl" class="timer">00:00:00</div>
         <div id="timerMetaEl" class="muted small">No active session</div>
@@ -228,6 +186,38 @@
       </div>
     </section>
 
+    <section id="tab-countdown" class="tab-page" hidden>
+      <div class="card countdown-card">
+        <div class="card-title">Countdown</div>
+        <div id="countdownStatusEl" class="status">Ready</div>
+        <div id="countdownDisplayEl" class="timer countdown-timer">00:00:00</div>
+        <div id="countdownMetaEl" class="muted small">Set a duration and hit Start</div>
+
+        <div class="preset-row" aria-label="Countdown presets">
+          <button class="cd-preset-btn active" data-cdpreset="25" type="button">25m</button>
+          <button class="cd-preset-btn" data-cdpreset="50" type="button">50m</button>
+          <button class="cd-preset-btn" data-cdpreset="90" type="button">90m</button>
+          <button class="cd-preset-btn" data-cdpreset="120" type="button">2h</button>
+        </div>
+
+        <label class="task-field">
+          <span>Label</span>
+          <input id="countdownLabelInput" type="text" maxlength="40" placeholder="Deep work, study, coding...">
+        </label>
+
+        <div class="timer-btns">
+          <button id="cdStartBtn" class="btn primary big">Start</button>
+          <button id="cdPauseBtn" class="btn big" disabled>Pause</button>
+          <button id="cdResetBtn" class="btn danger big">Reset</button>
+        </div>
+
+        <div class="goal-row">
+          <div class="progress"><div id="countdownBarEl" class="progress-fill cd-progress-fill"></div></div>
+          <div id="countdownProgressTextEl" class="muted small"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="tab-history" class="tab-page" hidden>
       <div class="card">
         <div class="card-title">History</div>
@@ -259,6 +249,7 @@
   <nav id="bottomNav" class="bottom-nav" hidden>
     <button data-tab="dashboard" class="nav-btn active">Timer</button>
     <button data-tab="leaderboard" class="nav-btn">Board</button>
+    <button data-tab="countdown" class="nav-btn">Countdown</button>
     <button data-tab="history" class="nav-btn">History</button>
     <button data-tab="settings" class="nav-btn">Settings</button>
   </nav>
@@ -279,5 +270,3 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="script.js"></script>
-</body>
-</html>
