@@ -346,28 +346,28 @@ function switchAuthMode(mode) {
   }
 }
 const MOTIVATION_QUOTES = [
-  { text: "Discipline is choosing what you want most over what you want now.", author: "Abraham Lincoln" },
-  { text: "Success is the sum of small efforts, repeated day in and day out.", author: "Robert Collier" },
-  { text: "You do not rise to the level of your goals. You fall to the level of your systems.", author: "James Clear" },
-  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-  { text: "Hard days build strong habits. Strong habits build strong lives.", author: "Lockin Fam" },
-  { text: "Small steps every day turn into giant results over time.", author: "Unknown" },
-  { text: "Do not wait for motivation. Build momentum and let it follow.", author: "Lockin Fam" },
-  { text: "Your effort compounds, even when no one is watching.", author: "Lockin Fam" },
-  { text: "Consistency is the quiet power behind every breakthrough.", author: "Lockin Fam" },
-  { text: "You are not behind. You are building.", author: "Lockin Fam" },
-  { text: "Pain is temporary. Progress is permanent when you keep going.", author: "Lockin Fam" },
-  { text: "When you feel tired, remember why you started.", author: "Lockin Fam" }
+  { text: "He who has a why to live for can bear almost any how.", author: "Friedrich Nietzsche" },
+  { text: "The impediment to action advances action. What stands in the way becomes the way.", author: "Marcus Aurelius" },
+  { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
+  { text: "The man who moves a mountain begins by carrying away small stones.", author: "Confucius" },
+  { text: "It is not that we have a short time to live, but that we waste a lot of it.", author: "Seneca" },
+  { text: "Don't explain your philosophy. Embody it.", author: "Epictetus" },
+  { text: "Out of your vulnerabilities will come your strength.", author: "Sigmund Freud" },
+  { text: "No tree, it is said, can grow to heaven unless its roots reach down to hell.", author: "Carl Jung" },
+  { text: "The cave you fear to enter holds the treasure you seek.", author: "Joseph Campbell" },
+  { text: "The price of anything is the amount of life you exchange for it.", author: "Henry David Thoreau" },
+  { text: "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.", author: "Stephen King" },
+  { text: "Until you make the unconscious conscious, it will direct your life and you will call it fate.", author: "Carl Jung" }
 ];
 
-function getTodayBucket() {
+function getHourBucket() {
   const now = new Date();
-  const bucket = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const bucket = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
   return bucket.getTime();
 }
 
 function getMotivationIndex() {
-  const bucket = getTodayBucket();
+  const bucket = getHourBucket();
   const stored = localStorage.getItem("focuspact-motivation-bucket");
   const storedIndex = Number(localStorage.getItem("focuspact-motivation-index") || 0);
 
@@ -381,7 +381,7 @@ function getMotivationIndex() {
 function renderMotivationQuote(forceIndex = null) {
   const safeIndex = forceIndex == null ? getMotivationIndex() : forceIndex;
   const item = MOTIVATION_QUOTES[safeIndex % MOTIVATION_QUOTES.length] || MOTIVATION_QUOTES[0];
-  const bucket = getTodayBucket();
+  const bucket = getHourBucket();
 
   localStorage.setItem("focuspact-motivation-bucket", String(bucket));
   localStorage.setItem("focuspact-motivation-index", String(safeIndex));
