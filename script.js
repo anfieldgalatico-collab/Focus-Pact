@@ -125,7 +125,8 @@ const els = {};
 "accountInfoEl","configInfoEl","editModal","editStartInput","editEndInput","editMsgEl","editSaveBtn",
 "editCancelBtn","sessionNoteInput","achievementList","avgDayEl","bestDayEl","focusScoreEl","trendEl",
 "motivationQuoteEl","motivationAuthorEl","quoteRefreshBtn",
-"countdownStatusEl","countdownDisplayEl","countdownMetaEl","countdownLabelInput","cdStartBtn","cdPauseBtn","cdResetBtn","countdownBarEl","countdownProgressTextEl"
+"countdownStatusEl","countdownDisplayEl","countdownMetaEl","countdownLabelInput","cdStartBtn","cdPauseBtn","cdResetBtn","countdownBarEl","countdownProgressTextEl",
+"focusCustomMinInput", "cdCustomMinInput"
 ].forEach((id) => { els[id] = $(id); });
 
 let sb = null;
@@ -309,6 +310,9 @@ function updatePresetButtons() {
   document.querySelectorAll(".preset-btn").forEach((button) => {
     button.classList.toggle("active", Number(button.dataset.preset) === currentPresetMinutes);
   });
+  if (els.focusCustomMinInput) {
+    els.focusCustomMinInput.value = currentPresetMinutes;
+  }
 }
 function showNotification(title, body) {
   if (!("Notification" in window)) return;
@@ -357,7 +361,19 @@ const MOTIVATION_QUOTES = [
   { text: "The cave you fear to enter holds the treasure you seek.", author: "Joseph Campbell" },
   { text: "The price of anything is the amount of life you exchange for it.", author: "Henry David Thoreau" },
   { text: "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.", author: "Stephen King" },
-  { text: "Until you make the unconscious conscious, it will direct your life and you will call it fate.", author: "Carl Jung" }
+  { text: "Until you make the unconscious conscious, it will direct your life and you will call it fate.", author: "Carl Jung" },
+  { text: "If you're going through hell, keep going.", author: "Winston Churchill" },
+  { text: "You have power over your mind - not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+  { text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
+  { text: "He who fears death will never do anything worth of a man who is alive.", author: "Seneca" },
+  { text: "Sometimes even to live is an act of courage.", author: "Seneca" },
+  { text: "First say to yourself what you would be; and then do what you have to do.", author: "Epictetus" },
+  { text: "Dwell on the beauty of life. Watch the stars, and see yourself running with them.", author: "Marcus Aurelius" },
+  { text: "To dare is to lose one's footing momentarily. Not to dare is to lose oneself.", author: "Søren Kierkegaard" },
+  { text: "Knowing yourself is the beginning of all wisdom.", author: "Aristotle" },
+  { text: "It is during our darkest moments that we must focus to see the light.", author: "Aristotle" },
+  { text: "Man is not worried by real problems so much as by his imagined anxieties about real problems.", author: "Epictetus" },
+  { text: "Life is very short and anxious for those who forget the past, neglect the present, and fear the future.", author: "Seneca" }
 ];
 
 function getHourBucket() {
@@ -814,6 +830,12 @@ function startTick() {
     if (!user || els.mainView.hidden) return;
     updateTimerUI();
     if (Date.now() - lastStatsAt > 15000 && !$("tab-dashboard").hidden) renderDashboard();
+
+    const currentBucket = getHourBucket();
+    const storedBucket = Number(localStorage.getItem("focuspact-motivation-bucket") || 0);
+    if (currentBucket !== storedBucket) {
+      refreshMotivationQuote();
+    }
   }, 1000);
 }
 function stopTick() { if (tickTimer) clearInterval(tickTimer); tickTimer = null; }
@@ -1010,6 +1032,9 @@ function updateCdPresetButtons() {
   document.querySelectorAll(".cd-preset-btn").forEach((btn) => {
     btn.classList.toggle("active", Number(btn.dataset.cdpreset) === cdPresetMinutes);
   });
+  if (els.cdCustomMinInput) {
+    els.cdCustomMinInput.value = cdPresetMinutes;
+  }
 }
 
 function renderCountdownUI() {
@@ -1169,6 +1194,22 @@ document.querySelectorAll(".cd-preset-btn").forEach((btn) => {
     renderCountdownUI();
   });
 });
+if (els.cdCustomMinInput) {
+  els.cdCustomMinInput.addEventListener("change", (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (!isFinite(val) || val < 1) val = 1;
+    cdPresetMinutes = val;
+    localStorage.setItem("lockin-cd-preset", String(cdPresetMinutes));
+    cdTotalSec = cdPresetMinutes * 60;
+    cdRemainingMs = cdTotalSec * 1000;
+    cdRunning = false;
+    cdPaused = false;
+    clearInterval(cdInterval);
+    cdInterval = null;
+    updateCdPresetButtons();
+    renderCountdownUI();
+  });
+}
 
 if (els.cdStartBtn) els.cdStartBtn.addEventListener("click", () => {
   if (cdPaused) { cdStart(); }
@@ -1199,6 +1240,15 @@ document.querySelectorAll(".preset-btn").forEach((button) => {
     updatePresetButtons();
   });
 });
+if (els.focusCustomMinInput) {
+  els.focusCustomMinInput.addEventListener("change", (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (!isFinite(val) || val < 1) val = 1;
+    currentPresetMinutes = val;
+    localStorage.setItem("focuspact-preset", String(currentPresetMinutes));
+    updatePresetButtons();
+  });
+}
 els.themeToggleBtn.addEventListener("click", toggleTheme);
 els.notifyToggleBtn.addEventListener("click", () => {
   if (Notification.permission === "granted") {

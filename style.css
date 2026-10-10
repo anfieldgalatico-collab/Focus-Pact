@@ -960,3 +960,26 @@ hr {
   color: var(--green);
   box-shadow: 0 0 18px rgba(94, 230, 167, 0.2);
 }
+
+/* Custom preset input */
+.custom-preset-input {
+  width: 90px;
+  flex: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  background: rgba(14, 21, 31, 0.9);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s ease;
+}
+.custom-preset-input:focus {
+  border-color: rgba(124, 92, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.2);
+}
+body[data-theme="light"] .custom-preset-input {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(238, 244, 255, 0.96)) !important;
+}
